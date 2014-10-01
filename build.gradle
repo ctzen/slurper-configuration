@@ -1,0 +1,211 @@
+//==================================================
+// slurper-configuration build file
+//==================================================
+
+group = 'com.ctzen'
+version = '1.0'
+
+defaultTasks 'clean', 'build'
+
+apply plugin: 'groovy'
+
+//==================================================
+// dependencies
+//==================================================
+
+repositories {
+    mavenCentral()
+    flatDir {
+        dirs 'lib'
+    }
+}
+
+dependencies {
+    // groovy
+    compile 'org.codehaus.groovy:groovy-all:2.3.6'      // version matches eclipse plug-in
+    // spring
+    compile 'org.springframework:spring-context:4.1.0.RELEASE'
+    // must haves
+    compile 'com.google.guava:guava:18.0'
+    // logging
+    compile 'org.slf4j:slf4j-api:1.7.7'
+    runtime 'ch.qos.logback:logback-classic:1.1.2'
+    runtime 'org.slf4j:jcl-over-slf4j:1.7.7'            // bridge commons-logging to slf4j
+    runtime 'org.slf4j:log4j-over-slf4j:1.7.7'          // bridge log4j to slf4j
+    // testing
+    testCompile 'org.slf4j:jcl-over-slf4j:1.7.7'        // need this to compile groovy tests
+    testCompile 'org.testng:testng:6.8.8'
+    testRuntime 'org.uncommons:reportng:1.1.4'          // nicer testng reports
+    testRuntime 'com.google.inject:guice:2.0'           // required by reportng (no major version due to bad meta on repo)
+    testCompile 'org.springframework:spring-test:4.1.0.RELEASE'
+    testRuntime name: 'slurper-configuration-test'      // for testing META-INF/slurper-configuration.properties
+}
+
+configurations {
+    all*.exclude group: 'commons-logging'       // exclude to use slf4j
+    all*.exclude group: 'log4j'                 // exclude to use slf4j
+}
+
+//==================================================
+// java / groovy
+//==================================================
+
+ext {
+    // CANNOT be full path or eclipse plugin may misbehave!
+    srcDir = 'src'                          // main sources and resources
+    classesDir = 'build/classes'            // main classes
+    testSrcDir = 'src-test'                 // test sources and resources
+    testClassesDir = 'build/classes-test'   // test classes
+    assetsDir = 'assets'                    // e.g. reportng css
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+    options.deprecation = true
+    options.compilerArgs << '-Xlint:unchecked'
+}
+
+tasks.withType(GroovyCompile) {
+    options.encoding = 'UTF-8'
+    options.deprecation = true
+    options.compilerArgs << '-Xlint:unchecked'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = []
+        }
+        groovy {
+            srcDirs = ["${srcDir}"]
+        }
+        resources {
+            srcDirs = ["${srcDir}"]             // note same as main source
+        }
+        output.classesDir = "${classesDir}"
+        output.resourcesDir = "${classesDir}"   // note same as main classes
+    }
+    test {
+        java {
+            srcDirs = []
+        }
+        groovy {
+            srcDirs = ["${testSrcDir}"]
+        }
+        resources {
+            srcDirs = ["${testSrcDir}"]             // note same as test source
+        }
+        output.classesDir = "${testClassesDir}"
+        output.resourcesDir = "${testClassesDir}"   // note same as test classes
+    }
+}
+
+// workaround dup entries in jar until GRADLE-2213 is fixed
+jar.doFirst {
+    sourceSets.main.output.resourcesDir = "/does/not/exist"
+}
+jar.doLast {
+    sourceSets.main.output.resourcesDir = sourceSets.main.output.classesDir
+}
+
+//==================================================
+// unit test
+//==================================================
+
+apply plugin: 'jacoco'
+
+test {
+    useTestNG() {
+        parallel 'tests'
+        threadCount 5
+    }
+    systemProperty 'org.uncommons.reportng.stylesheet', "${assetsDir}/reportng-custom.css"
+    options {
+        listeners << 'org.uncommons.reportng.HTMLReporter'      // use reportng
+        listeners << 'org.uncommons.reportng.JUnitXMLReporter'  // also produce junit xml reports for
+                                                                // downstream build step such as
+                                                                // jenkins' unit test report
+    }
+    jacoco {
+        append = false
+        destinationFile = file("${reporting.baseDir}/jacoco/jacoco.exec")
+    }
+    doLast {
+        jacocoTestReport.execute()
+    }
+}
+
+jacocoTestReport {
+    group = 'Reporting'
+    description = 'Generate Jacoco unit tests coverage report.'
+    dependsOn test
+    reports {
+        xml.enabled = false
+        csv.enabled false
+        html.enabled true
+        html.destination "${reporting.baseDir}/jacoco/html"
+    }
+}
+
+//==================================================
+// eclipse integration
+//==================================================
+
+apply plugin: 'eclipse'
+
+eclipse {
+    classpath {
+        downloadSources = true
+        // setup separate output classes folders.
+        defaultOutputDir = file("${classesDir}")
+        file {
+            // Classpath entry for Eclipse which changes the order of classpathentries
+            // otherwise no sources for 3rd party jars are shown
+            withXml { xml ->
+                def node = xml.asNode()
+                def j2eeNode = node.find { it.@path == 'org.eclipse.jst.j2ee.internal.web.container' }
+                if (j2eeNode) {
+                    node.remove(j2eeNode)
+                    node.appendNode( 'classpathentry', [ kind: 'con', path: 'org.eclipse.jst.j2ee.internal.web.container', exported: 'true'])
+                }
+            }
+            // switch test classes output folder
+            whenMerged { cp ->
+                cp.entries.findAll {
+                    it.kind == 'src' && it.path == "${testSrcDir}"
+                }*.output = "${testClassesDir}"
+            }
+        }
+    }
+}
+
+// always clean when generating eclipse project files
+// because the generated files without cleaning could be bad
+tasks.eclipse.dependsOn cleanEclipse
+
+//==================================================
+// publish
+//==================================================
+
+apply plugin: 'maven-publish'
+
+task sourceJar(type: Jar) {
+    from sourceSets.main.allSource
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifact sourceJar {
+                classifier "sources"
+            }
+        }
+    }
+}
+
+task publishLocal {
+    group = 'Publishing'
+    description = 'Alias for publishToMavenLocal'
+    dependsOn publishToMavenLocal
+}
