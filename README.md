@@ -44,7 +44,7 @@ environments {
 ```
 
 #### Local Overrides
-By setting the locations to load on the Config object.  Latter locations will overrides values set by ealier locations.
+By setting the locations to load on the Config object.  Latter locations will overrides values set by earlier locations.
 Locations are Spring's resource strings such as `classpath:x/y/z`, and `file:/x/y/z`.
 With an additional type `class:fully.qualified.Classname` which loads a compiled config groovy class.
 ```java

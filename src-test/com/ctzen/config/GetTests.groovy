@@ -55,6 +55,7 @@ class GetTests {
             [ 'l1.l2.qux', 2 ],
             [ 'l1.l2.l3.qux', 3 ],
             [ 'aNull', null ],
+            [ 'redacted', 'I am redacted!' ],
         ] as Object[][]
     }
 

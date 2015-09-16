@@ -1,22 +1,13 @@
 package com.ctzen.config;
 
+import com.ctzen.config.exception.ConfigException;
+import com.ctzen.config.exception.NoSuchKeyException;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
 import groovy.util.ConfigObject;
 import groovy.util.ConfigSlurper;
-
-import java.io.IOException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeMap;
-
 import org.codehaus.groovy.runtime.GStringImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,10 +21,10 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 
-import com.ctzen.config.exception.ConfigException;
-import com.ctzen.config.exception.NoSuchKeyException;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import java.io.IOException;
+import java.net.URL;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * {@link ConfigSlurper} backed configuration.
@@ -196,6 +187,7 @@ public class Config implements InitializingBean, EnvironmentAware, ResourceLoade
             resourceLoader = new DefaultResourceLoader(Thread.currentThread().getContextClassLoader());
         }
         values.clear();
+        redacts.clear();
         List<String> effectiveProfiles = getEffectiveProfiles();
         LOG.info("Load using profiles: {}", effectiveProfiles);
         final List<String> effectiveLocations = getEffectiveLocations();
@@ -260,6 +252,10 @@ public class Config implements InitializingBean, EnvironmentAware, ResourceLoade
 
     private ConfigObject loadFromResource(final ConfigSlurper slurper, final String location) {
         final Resource res = resourceLoader.getResource(location);
+        if (!res.exists()) {
+            LOG.warn("Skip non-existence resource: {}", res);
+            return null;
+        }
         if (!res.isReadable()) {
             LOG.warn("Resource not readable: {}", res);
             return null;
@@ -290,7 +286,7 @@ public class Config implements InitializingBean, EnvironmentAware, ResourceLoade
                 }
             }
             else if (srcValue instanceof CharSequence) {
-                final String sv = ((CharSequence)srcValue).toString();
+                final String sv = srcValue.toString();
                 if (sv.startsWith(GROOVY_SCRIPT_VALUE_PREFIX)) {
                     final Binding binding = new Binding();
                     final Object baseValue = base.get(srcKey);
@@ -317,6 +313,11 @@ public class Config implements InitializingBean, EnvironmentAware, ResourceLoade
                 loadValues(key + ".", (ConfigObject)value);
             }
             else {
+
+                if (value instanceof Redact) {
+                    redacts.add(key);
+                    value = ((Redact<?>)value).getValue();
+                }
                 if (value instanceof GStringImpl) {
                     value = value.toString();
                 }
@@ -329,22 +330,28 @@ public class Config implements InitializingBean, EnvironmentAware, ResourceLoade
         final StringBuilder msg = new StringBuilder(values.size() + " config values:");
         for (final Map.Entry<?, ?> entry: values.entrySet()) {
             msg.append("\n    ")
-               .append(entry.getKey())
-               .append(" (");
-            final Object value = entry.getValue();
-            if (value == null) {
-                msg.append("null");
+               .append(entry.getKey());
+            if (redacts.contains(entry.getKey())) {
+                msg.append(" = <redacted>");
             }
             else {
-                msg.append(value.getClass().getSimpleName());
+                msg.append(" (");
+                final Object value = entry.getValue();
+                if (value == null) {
+                    msg.append("null");
+                }
+                else {
+                    msg.append(value.getClass().getSimpleName());
+                }
+                msg.append(") = ")
+                    .append(entry.getValue());
             }
-            msg.append(") = ")
-               .append(entry.getValue());
         }
         LOG.info(msg.toString());
     }
 
     private final Map<String, Object> values = new TreeMap<>();
+    private final Set<String> redacts = new HashSet<>();
 
     /**
      * @return {@code true} if there is no config entry

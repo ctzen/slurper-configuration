@@ -3,7 +3,7 @@
 //==================================================
 
 group = 'com.ctzen'
-version = '1.0'
+version = '1.1'
 
 defaultTasks 'clean', 'build'
 
@@ -22,22 +22,22 @@ repositories {
 
 dependencies {
     // groovy
-    compile 'org.codehaus.groovy:groovy-all:2.3.6'      // version matches eclipse plug-in
+    compile 'org.codehaus.groovy:groovy-all:2.4.4'      // version matches eclipse plug-in
     // spring
-    compile 'org.springframework:spring-context:4.1.0.RELEASE'
+    compile 'org.springframework:spring-context:4.2.1.RELEASE'
     // must haves
     compile 'com.google.guava:guava:18.0'
     // logging
-    compile 'org.slf4j:slf4j-api:1.7.7'
-    runtime 'ch.qos.logback:logback-classic:1.1.2'
-    runtime 'org.slf4j:jcl-over-slf4j:1.7.7'            // bridge commons-logging to slf4j
-    runtime 'org.slf4j:log4j-over-slf4j:1.7.7'          // bridge log4j to slf4j
+    compile 'org.slf4j:slf4j-api:1.7.12'
+    runtime 'ch.qos.logback:logback-classic:1.1.3'
+    runtime 'org.slf4j:jcl-over-slf4j:1.7.12'           // bridge commons-logging to slf4j
+    runtime 'org.slf4j:log4j-over-slf4j:1.7.12'         // bridge log4j to slf4j
     // testing
-    testCompile 'org.slf4j:jcl-over-slf4j:1.7.7'        // need this to compile groovy tests
-    testCompile 'org.testng:testng:6.8.8'
+    testCompile 'org.slf4j:jcl-over-slf4j:1.7.12'       // need this to compile groovy tests
+    testCompile 'org.testng:testng:6.9.6'
     testRuntime 'org.uncommons:reportng:1.1.4'          // nicer testng reports
-    testRuntime 'com.google.inject:guice:2.0'           // required by reportng (no major version due to bad meta on repo)
-    testCompile 'org.springframework:spring-test:4.1.0.RELEASE'
+    testRuntime 'com.google.inject:guice:4.0'           // required by reportng (no major version due to bad meta on repo)
+    testCompile 'org.springframework:spring-test:4.2.1.RELEASE'
     testRuntime name: 'slurper-configuration-test'      // for testing META-INF/slurper-configuration.properties
 }
 
@@ -208,4 +208,12 @@ task publishLocal {
     group = 'Publishing'
     description = 'Alias for publishToMavenLocal'
     dependsOn publishToMavenLocal
+}
+
+//==================================================
+// gradle wrapper
+//==================================================
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.7'
 }

@@ -20,3 +20,5 @@ l1 {
 aNull = null
 
 pojo = new TestPojo(name: 'I am pojo!')
+
+redacted = new Redact('I am redacted!')
