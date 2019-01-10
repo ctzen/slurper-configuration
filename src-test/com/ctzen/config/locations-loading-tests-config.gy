@@ -1,5 +1,0 @@
-package com.ctzen.config
-
-foo = 'I am script'
-
-qux = 'qux from script'

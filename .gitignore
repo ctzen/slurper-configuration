@@ -1,4 +1,10 @@
+# the usual suspects...
 .*
+# except these...
 !.gitignore
-/build
-*.iml
+!.gitattributes
+!.java-version
+
+# derived artifacts...
+/**/build/
+/**/out/

@@ -1,8 +1,0 @@
-package com.ctzen.config
-
-
-foo = [ 1, 2, 3 ]
-
-ina {
-    bar = 'An apple a day'
-}
