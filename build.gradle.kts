@@ -17,7 +17,7 @@ val snapshot = false
 
 group = "com.ctzen.config"
 version = "1.2.0" + (if (snapshot) "-SNAPSHOT" else "")
-description = "JPA Static Metamodel Exporter"
+description = "Application configuration backed by Groovy ConfigSlurper, plus support for Spring Framework placeholders, and @value annotations."
 
 fun gitRev(): String {
     try {
@@ -54,7 +54,7 @@ object Pub {
         var key: String? = null
         const val repo = "ctzen"
         const val license = "MIT"
-        val labels = arrayOf("java", "JPA Static Metamodel")
+        val labels = arrayOf("groovy", "configuration")
     }
 }
 
