@@ -80,7 +80,7 @@ public class ConfigPlaceholderConfigurer extends PlaceholderConfigurerSupport im
     /**
      * Implemented for compatibility with {@link org.springframework.beans.factory.config.PlaceholderConfigurerSupport}.
      * @deprecated in favor of {@link #processProperties(ConfigurableListableBeanFactory, ConfigurablePropertyResolver)}
-     * @throws UnsupportedOperationException
+     * @throws UnsupportedOperationException always
      */
     @Override
     @Deprecated

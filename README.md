@@ -77,6 +77,15 @@ public class MyBean {
 
 ## Setup and Usage
 
+```kotlin
+repositories {
+    jcenter()
+}
+dependencies {
+    implementation("com.ctzen.config:slurper-configuration:<version>")
+}
+```
+
 ### Standalone Setup
 ```java
 // setup
@@ -170,7 +179,7 @@ public class MyBean {
 
 ## build
 
-    ./gradlew clean build javadoc
+    ./gradlew clean build
     
 ## More Features
 
