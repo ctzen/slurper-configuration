@@ -2,11 +2,11 @@ package com.ctzen.config;
 
 import com.ctzen.config.exception.ConfigException;
 import com.ctzen.config.exception.NoSuchKeyException;
+import com.ctzen.config.loader.GroovyScriptClassLoader;
+import com.ctzen.config.loader.GroovyScriptResourceLoader;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import groovy.lang.Binding;
-import groovy.lang.GroovyShell;
 import groovy.util.ConfigObject;
 import groovy.util.ConfigSlurper;
 import org.codehaus.groovy.runtime.GStringImpl;
@@ -23,10 +23,8 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.function.BiFunction;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -39,20 +37,12 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
 
     private static final Logger LOG = LoggerFactory.getLogger(Config.class);
 
-    /**
-     * Resource location string prefix for Groovy script class.
-     */
-    public static final String LOCATION_PREFIX_CLASS = "class:";
-
-    /**
-     * Inline Groovy script prefix.
-     */
-    public static final String GROOVY_SCRIPT_VALUE_PREFIX = "groovy::";
-
-    /**
-     * Inline Groovy script base value variable name.
-     */
-    public static final String GROOVY_SCRIPT_BASE_VALUE_VAR = "x";
+    public Config() {
+        addLoaders(
+                new GroovyScriptClassLoader(),
+                new GroovyScriptResourceLoader()
+        );
+    }
 
     /*====================================================================================================
      * PROFILE NAMES
@@ -81,7 +71,7 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
     private final Set<String> profiles = new LinkedHashSet<>();     // maintain insertion order
 
     /**
-     * @return profiles set by {@link #setProfiles(Collection)}, or {@link #setProfiles(String...)}.
+     * @return profiles set by {@link #setProfiles(List)}, or {@link #setProfiles(String...)}.
      */
     public List<String> getProfiles() {
         return ImmutableList.copyOf(profiles);
@@ -90,7 +80,7 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
     /**
      * @param profiles  profile names
      */
-    public void setProfiles(final Collection<String> profiles) {
+    public void setProfiles(final List<String> profiles) {
         this.profiles.clear();
         this.profiles.addAll(profiles);
     }
@@ -126,10 +116,8 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
 
     /**
      * The finalized list of effective profile names.
-     *
      * <p>
-     * If {@link #isCombineProfiles()} is {@code true}, combine {@link Environment#getActiveProfiles()} and {@link #getProfiles()}.
-     * <br>
+     * If {@link #isCombineProfiles()} is {@code true}, combine {@link Environment#getActiveProfiles()} and {@link #getProfiles()}.<br>
      * Otherwise, return {@link Environment#getActiveProfiles()} if present, and fallback to {@link #getProfiles()}.
      * </p>
      *
@@ -164,17 +152,14 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
 
     /**
      * Set where to load the config from.
-     *
      * <p>
      * Supports spring-style resource strings, e.g.<br>
      * &nbsp;&nbsp;{@code "classpath:org/acme/config.gy"}<br>
      * &nbsp;&nbsp;{@code "file:/path/to/config.gy"}
      * </p>
-     *
      * <p>
      * Additional resource string types:
      * </p>
-     *
      * <p>
      * {@code "class:fully.qualified.Classname"}
      * which loads from the compiled Groovy script class.
@@ -182,15 +167,14 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
      *
      * @param locations     config locations
      */
-    public void setLocations(final Collection<String> locations) {
+    public void setLocations(final List<String> locations) {
         this.locations.clear();
         addLocations(locations);
     }
 
     /**
      * @param locations     config locations
-     *
-     * @see #setLocations(Collection)
+     * @see #setLocations(List)
      */
     public void setLocations(final String... locations) {
         setLocations(Arrays.asList(locations));
@@ -201,7 +185,7 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
      *
      * @param locations     config locations
      */
-    public void addLocations(final Collection<String> locations) {
+    public void addLocations(final List<String> locations) {
         this.locations.addAll(locations);
     }
 
@@ -285,6 +269,61 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
         this.resourceLoader = resourceLoader;
     }
 
+    private void finalizeResourceLoader() {
+        if (resourceLoader == null) {
+            resourceLoader = new DefaultResourceLoader(Thread.currentThread().getContextClassLoader());
+        }
+        loaders.stream()
+                .filter(loader -> loader instanceof ResourceLoaderAware)
+                .forEach(loader -> ((ResourceLoaderAware)loader).setResourceLoader(resourceLoader));
+    }
+
+    private final List<ConfigLoader> loaders = new LinkedList<>();
+
+    /**
+     * Config loaders loads configurations from {@code locations}.
+     * <p>
+     * Default loaders are:
+     * </p>
+     * <ol>
+     *     <li>
+     *         {@link GroovyScriptClassLoader}
+     *         handles location {@code "class:"} prefix
+     *         capable of loading Groovy script classes
+     *     </li>
+     *     <li>
+     *         {@link GroovyScriptResourceLoader}
+     *         last catch all loader
+     *         capable of loading Groovy scripts from resource URLs
+     *     </li>
+     * </ol>
+     * <p>
+     *     Order is important, the first loader capable of handling a location will be used.
+     * </p>
+     * <p>
+     *     Added loaders will be stacked onto existing loaders. e.g. {@code addLoader(foo, bar)}
+     *     will result in {@code foo, bar, GroovyScriptClassLoader, GroovyScriptResourceLoader}
+     * </p>
+     * @param loaders   config loaders
+     */
+    public void addLoaders(final List<ConfigLoader> loaders) {
+        for (int i = loaders.size() - 1; i >= 0; --i) {
+            this.loaders.add(0, loaders.get(i));
+        }
+    }
+
+    /**
+     * @param loaders   config loaders
+     * @see {@link #addLoaders(List)}
+     */
+    public void addLoaders(final ConfigLoader... loaders) {
+        addLoaders(Arrays.asList(loaders));
+    }
+
+    private ConfigLoader getLoader(final String location) {
+        return loaders.stream().filter(loader -> loader.handles(location)).findFirst().get();
+    }
+
     /**
      * For spring to finalize this bean. Non spring users should call {@link #load()} instead.
      */
@@ -299,11 +338,8 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
      */
     public void load() {
         final long start = System.currentTimeMillis();
-        // finalize the resourceLoader
-        if (resourceLoader == null) {
-            resourceLoader = new DefaultResourceLoader(Thread.currentThread().getContextClassLoader());
-        }
         values.clear();
+        finalizeResourceLoader();
         List<String> effectiveProfiles = getEffectiveProfiles();
         LOG.info("Load using profiles: {}", effectiveProfiles);
         final List<String> effectiveLocations = getEffectiveLocations();
@@ -317,7 +353,7 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
                 LOG.warn("Nothing is loaded!");
             }
             else {
-                putValues("", configObject);
+                putValues(configObject);
             }
         }
         logLoadedValues();
@@ -326,96 +362,16 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
 
     private void loadFromLocation(final ConfigObject configObject, final String location, final List<String> profiles) {
         LOG.info("Load from: {}", location);
-        if (location.startsWith(LOCATION_PREFIX_CLASS)) {
-            loadWithSlurper(configObject, location.substring(LOCATION_PREFIX_CLASS.length()), profiles, this::loadFromClass);
-        }
-        else {
-            loadWithSlurper(configObject, location, profiles, this::loadFromResource);
-        }
-    }
-
-    private void loadWithSlurper(final ConfigObject configObject, final String location, final List<String> profiles,
-                                 final BiFunction<ConfigSlurper, String, ConfigObject> loader) {
-        if (profiles.isEmpty()) {
-            merge(configObject, loader.apply(new ConfigSlurper(), location));
-        }
-        else {
-            profiles.forEach(profile -> merge(configObject, loader.apply(new ConfigSlurper(profile), location)));
-        }
-    }
-
-    private ConfigObject loadFromClass(final ConfigSlurper slurper, final String classname) {
-        final Class<?> scriptClass;
-        try {
-            scriptClass = resourceLoader.getClassLoader().loadClass(classname);
-        }
-        catch (final ClassNotFoundException e) {
-            LOG.warn("Skip class not found: {}", classname);
-            return null;
-        }
-        return slurper.parse(scriptClass);
-    }
-
-    private ConfigObject loadFromResource(final ConfigSlurper slurper, final String location) {
-        final Resource res = resourceLoader.getResource(location);
-        if (!res.exists()) {
-            LOG.warn("Skip non-existence resource: {}", res);
-            return null;
-        }
-        if (!res.isReadable()) {
-            LOG.warn("Skip not readable resource: {}", res);
-            return null;
-        }
-        final URL url;
-        try {
-            url = res.getURL();
-        }
-        catch (final IOException e) {
-            throw new ConfigException("Not expecting a bad URL from a readable resource: " + res, e);
-        }
-        return slurper.parse(url);
-    }
-
-    private void merge(final ConfigObject base, final ConfigObject src) {
-        if (src != null) {
-            resolveScriptValues(base, src);
-            base.merge(src);
-        }
-    }
-
-    /**
-     * Resolve any inline groovy script values before merge.
-     */
-    private void resolveScriptValues(final ConfigObject base, final ConfigObject src) {
-        @SuppressWarnings("unchecked")
-        final Set<Entry<String, Object>> srcEntries = src.entrySet();
-        srcEntries.forEach(srcEntry -> {
-            final String srcKey = srcEntry.getKey();
-            final Object srcValue = srcEntry.getValue();
-            if (srcValue instanceof ConfigObject) {
-                final Object baseValue = base.get(srcKey);
-                if (baseValue instanceof ConfigObject) {
-                    resolveScriptValues((ConfigObject)baseValue, (ConfigObject)srcValue);
-                }
-            }
-            else if (srcValue instanceof CharSequence) {
-                final String sv = srcValue.toString();
-                if (sv.startsWith(GROOVY_SCRIPT_VALUE_PREFIX)) {
-                    final Binding binding = new Binding();
-                    final Object baseValue = base.get(srcKey);
-                    binding.setVariable(GROOVY_SCRIPT_BASE_VALUE_VAR, baseValue);
-                    final GroovyShell shell = new GroovyShell(binding);
-                    final String script = sv.substring(GROOVY_SCRIPT_VALUE_PREFIX.length());
-                    final Object resolvedValue = shell.evaluate(script);
-                    srcEntry.setValue(resolvedValue);
-                }
-            }
-        });
+        getLoader(location).load(location, profiles).forEach(configObject::merge);
     }
 
     /**
      * Flattens and finalizes the config values.
      */
+    private void putValues(final ConfigObject configObject) {
+        putValues("", configObject);
+    }
+
     private void putValues(final String keyPrefix, final ConfigObject configObject) {
         @SuppressWarnings("unchecked")
         final Set<Entry<String,?>> entries = configObject.entrySet();
@@ -442,11 +398,9 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
 
     /**
      * Redact sensitive config values (e.g. passwords) when logging the loaded entries.
-     *
      * <p>
      * There are 2 ways to achieve this:
      * </p>
-     *
      * <ol>
      *     <li>
      *         Use {@link Redact} in the config script.<br>
@@ -466,7 +420,6 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
 
     /**
      * @param redactKeys    config keys to redact the values
-     *
      * @see #addRedactKeys(Collection)
      */
     public void addRedactKeys(String... redactKeys) {
@@ -486,11 +439,9 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
 
     /**
      * After loading, should the finalized config entries be logged?
-     *
      * <p>
      * Useful to know the actual config values.
      * </p>
-     *
      * <p>
      * Default is {@code true}
      * </p>

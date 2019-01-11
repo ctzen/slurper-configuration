@@ -1,3 +1,8 @@
+## v2.0.0 / ???
+- Refactored config loading (plug-in friendly)
+- Remove inline script values<br>
+  not used and way too confusing
+
 ## v1.2.0 / 2019-01-10
 - Modernize
 

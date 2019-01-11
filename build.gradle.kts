@@ -13,10 +13,10 @@ plugins {
     id("nebula.optional-base") version "5.0.0"
 }
 
-val snapshot = false
+val snapshot = true
 
 group = "com.ctzen.config"
-version = "1.2.0" + (if (snapshot) "-SNAPSHOT" else "")
+version = "2.0.0" + (if (snapshot) "-SNAPSHOT" else "")
 description = "Application configuration backed by Groovy ConfigSlurper, plus support for Spring Framework placeholders, and @value annotations."
 
 fun gitRev(): String {
