@@ -314,7 +314,7 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
 
     /**
      * @param loaders   config loaders
-     * @see {@link #addLoaders(List)}
+     * @see #addLoaders(List)
      */
     public void addLoaders(final ConfigLoader... loaders) {
         addLoaders(Arrays.asList(loaders));

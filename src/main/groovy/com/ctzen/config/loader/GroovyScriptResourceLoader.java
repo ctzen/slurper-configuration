@@ -34,7 +34,7 @@ public class GroovyScriptResourceLoader extends AbstractConfigLoader implements 
     }
 
     /**
-     * @param location  location
+     * @param location  resource location string
      * @return true (this is the catch-all loader)
      */
     @Override

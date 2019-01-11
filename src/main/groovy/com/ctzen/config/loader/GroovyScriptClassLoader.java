@@ -35,7 +35,7 @@ public class GroovyScriptClassLoader extends AbstractConfigLoader implements Res
     }
 
     /**
-     * @param location
+     * @param location  resource location string
      * @return {@code true} if {@code location} starts with {@link #LOCATION_PREFIX}
      */
     @Override
