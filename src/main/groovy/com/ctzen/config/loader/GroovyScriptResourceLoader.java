@@ -4,7 +4,6 @@ import groovy.util.ConfigObject;
 import org.springframework.context.ResourceLoaderAware;
 
 import java.net.URL;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,7 +29,7 @@ public class GroovyScriptResourceLoader extends AbstractConfigLoader implements 
     @Override
     public List<ConfigObject> load(final String location, final List<String> profiles) {
         final URL url = getResourceURL(location);
-        return url == null ? Collections.emptyList()
+        return url == null ? NO_CONFIG
                            : slurpers(profiles).map(slurper -> slurper.parse(url))
                                                .collect(Collectors.toList());
     }

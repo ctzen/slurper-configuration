@@ -3,7 +3,6 @@ package com.ctzen.config.loader;
 import groovy.util.ConfigObject;
 import org.springframework.context.ResourceLoaderAware;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,7 +33,7 @@ public class GroovyScriptClassLoader extends AbstractConfigLoader implements Res
     @Override
     public List<ConfigObject> load(final String location, final List<String> profiles) {
         final Class<?> scriptClass = loadClass(location.substring(LOCATION_PREFIX.length()));
-        return scriptClass == null ? Collections.emptyList()
+        return scriptClass == null ? NO_CONFIG
                                    : slurpers(profiles).map(slurper -> slurper.parse(scriptClass))
                                                        .collect(Collectors.toList());
     }

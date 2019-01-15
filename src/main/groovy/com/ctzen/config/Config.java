@@ -4,6 +4,7 @@ import com.ctzen.config.exception.ConfigException;
 import com.ctzen.config.exception.NoSuchKeyException;
 import com.ctzen.config.loader.GroovyScriptClassLoader;
 import com.ctzen.config.loader.GroovyScriptResourceLoader;
+import com.ctzen.config.loader.PropertiesLoader;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -39,6 +40,7 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
 
     public Config() {
         addLoaders(
+                new PropertiesLoader(),
                 new GroovyScriptClassLoader(),
                 new GroovyScriptResourceLoader()
         );
@@ -164,6 +166,10 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
      * {@code "class:fully.qualified.Classname"}
      * which loads from the compiled Groovy script class.
      * </p>
+     * <p>
+     * {@code "<spring-style resource string>.properties"}
+     * loads from properties file
+     * </p>
      *
      * @param locations     config locations
      */
@@ -286,6 +292,11 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
      * Default loaders are:
      * </p>
      * <ol>
+     *     <li>
+     *         {@link PropertiesLoader}
+     *         handles location {@code ".properties"} suffix
+     *         capable of loading properties files
+     *     </li>
      *     <li>
      *         {@link GroovyScriptClassLoader}
      *         handles location {@code "class:"} prefix

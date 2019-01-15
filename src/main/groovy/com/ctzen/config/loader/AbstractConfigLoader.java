@@ -2,6 +2,7 @@ package com.ctzen.config.loader;
 
 import com.ctzen.config.ConfigLoader;
 import com.ctzen.config.exception.ConfigException;
+import groovy.util.ConfigObject;
 import groovy.util.ConfigSlurper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +12,7 @@ import org.springframework.core.io.ResourceLoader;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -18,6 +20,8 @@ import java.util.stream.Stream;
  * @author cchang
  */
 public abstract class AbstractConfigLoader implements ConfigLoader {
+
+    protected static final List<ConfigObject> NO_CONFIG = Collections.emptyList();
 
     private ResourceLoader resourceLoader;
 
