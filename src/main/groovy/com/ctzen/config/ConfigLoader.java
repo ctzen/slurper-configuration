@@ -25,7 +25,10 @@ public interface ConfigLoader {
     /**
      * Loads configurations from a location for the specified profiles.
      * <p>
-     * If the config resource is missing, it should be skiped and an empty list returned.
+     * If the config resource is missing, it should be skipped and an empty list returned.
+     * </p>
+     * <p>
+     * Must be thread-safe.
      * </p>
      *
      * @param location  resource location string
