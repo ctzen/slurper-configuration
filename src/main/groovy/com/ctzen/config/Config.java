@@ -372,7 +372,6 @@ public class Config implements EnvironmentAware, ResourceLoaderAware, Initializi
     }
 
     private void loadFromLocation(final ConfigObject configObject, final String location, final List<String> profiles) {
-        LOG.info("Load from: {}", location);
         getLoader(location).load(location, profiles).forEach(configObject::merge);
     }
 

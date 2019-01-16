@@ -32,6 +32,7 @@ public class GroovyScriptClassLoader extends AbstractConfigLoader implements Res
 
     @Override
     public List<ConfigObject> load(final String location, final List<String> profiles) {
+        logLoading(location);
         final Class<?> scriptClass = loadClass(location.substring(LOCATION_PREFIX.length()));
         return scriptClass == null ? NO_CONFIG
                                    : slurpers(profiles).map(slurper -> slurper.parse(scriptClass))

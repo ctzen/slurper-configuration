@@ -28,6 +28,7 @@ public class GroovyScriptResourceLoader extends AbstractConfigLoader implements 
 
     @Override
     public List<ConfigObject> load(final String location, final List<String> profiles) {
+        logLoading(location);
         final URL url = getResourceURL(location);
         return url == null ? NO_CONFIG
                            : slurpers(profiles).map(slurper -> slurper.parse(url))

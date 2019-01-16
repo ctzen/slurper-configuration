@@ -56,6 +56,10 @@ public abstract class AbstractConfigLoader implements ConfigLoader {
         return LoggerFactory.getLogger(this.getClass());
     }
 
+    protected void logLoading(final String location) {
+        getLogger().info("Load from: {}", location);
+    }
+
     /**
      * Loads a class using the resource loader's class loader.
      *

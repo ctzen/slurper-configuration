@@ -59,6 +59,7 @@ public class PropertiesLoader extends AbstractConfigLoader implements ResourceLo
     }
 
     private ConfigObject loadProperties(final String location) {
+        logLoading(location);
         final Resource resource = getResource(location);
         if (resource == null) {
             return null;
