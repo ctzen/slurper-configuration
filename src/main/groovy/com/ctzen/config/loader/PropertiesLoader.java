@@ -43,6 +43,8 @@ public class PropertiesLoader extends AbstractConfigLoader implements ResourceLo
         return location.endsWith(LOCATION_SUFFIX);
     }
 
+    private static final String LOCATION_PROFILE_SEP = "@";
+
     @Override
     public List<ConfigObject> load(final String location, final List<String> profiles) {
         final List<ConfigObject> configObjects = new LinkedList<>();
@@ -52,7 +54,7 @@ public class PropertiesLoader extends AbstractConfigLoader implements ResourceLo
         }
         final String baseLocation = location.substring(0, location.length() - LOCATION_SUFFIX.length());
         profiles.stream()
-                .map(profile -> loadProperties(baseLocation + "-" + profile + LOCATION_SUFFIX))
+                .map(profile -> loadProperties(baseLocation + LOCATION_PROFILE_SEP + profile + LOCATION_SUFFIX))
                 .filter(Objects::nonNull)
                 .forEach(configObjects::add);
         return configObjects;

@@ -1,4 +1,6 @@
 ## v2.0.0 / ???
+- PropertiesLoader
+  .properties files as config sources
 - Refactored config loading (plug-in friendly)
 - Remove inline script values<br>
   not used and way too confusing

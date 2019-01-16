@@ -1,6 +1,8 @@
 # slurper-configuration
 
-Application configuration backed by [ConfigSlurper](http://groovy.codehaus.org/ConfigSlurper), plus support for [Spring Framework](http://projects.spring.io/spring-framework/) placeholders, and [@Value](http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/beans/factory/annotation/Value.html) annotations.
+Application configuration backed by [ConfigSlurper](http://groovy.codehaus.org/ConfigSlurper),
+plus support for [Spring Framework](http://projects.spring.io/spring-framework/) placeholders,
+and [@Value](http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/beans/factory/annotation/Value.html) annotations.
 
 ## Features
 
@@ -45,7 +47,7 @@ environments {
 
 #### Local Overrides
 By setting the locations to load on the Config object.  Latter locations will overrides values set by earlier locations.
-Locations are Spring's resource strings such as `classpath:x/y/z`, and `file:/x/y/z`.
+Locations are Spring's resource strings such as `classpath:x/y/z`, or `file:/x/y/z`.
 With an additional type `class:fully.qualified.Classname` which loads a compiled config groovy class.
 ```java
 Config config = new Config();
@@ -182,6 +184,27 @@ public class MyBean {
     ./gradlew clean build
     
 ## More Features
+
+### .properties files as config source
+
+Config location ends with `.properties` can be used as config sources.
+
+Profiles are handled by file naming, for example:
+```groovy
+config.setProfiles('dev');
+config.setLocations('classpath:conf/my-config.properties');
+```
+
+The following properties files (if exists) will be loaded in order:
+```
+1. classpath:conf/my-config.properties
+2. classpath:conf/my-config@dev.properties
+```
+
+Essentially, the base config filename is appended with `@<profile name>` for each profile.
+
+.properties files function the same as the other location types (such as overridding),
+but only String values are supported (duh). 
 
 #### Default Locations
 Say you wish to use this in developing a library (jar), and you have some default configuration values, e.g. in your com.acme.AcmeConfig class, instead of asking your user to add that location, you can set it in `META-INF/slurper-configuration.properties` of your jar (ironic, I know). Here is an example:
