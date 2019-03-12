@@ -13,7 +13,7 @@ plugins {
     id("nebula.optional-base") version "5.0.0"
 }
 
-val snapshot = true
+val snapshot = false
 
 group = "com.ctzen.config"
 version = "2.0.0" + (if (snapshot) "-SNAPSHOT" else "")
@@ -181,6 +181,7 @@ artifactory {
             setProperty("repoKey", if (snapshot) "oss-snapshot-local" else "oss-release-local")
             setProperty("username", Pub.Bintray.user)
             setProperty("password", Pub.Bintray.key)
+//            setProperty("publishBuildInfo", false)
         })
         defaults(delegateClosureOf<GroovyObject> {
             invokeMethod("publications", Pub.name)
